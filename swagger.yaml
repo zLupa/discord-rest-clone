@@ -1,0 +1,293 @@
+openapi: "3.0.2"
+info:
+  title: Discord Rest Clone
+  version: "v1"
+servers:
+  - url: http://localhost:3333/api
+components:
+  schemas:
+    Guild:
+      type: object
+      properties:
+        id:
+          type: string
+          format: "uuid"
+        name:
+          example: "Overwatch Game"
+          type: "string"
+        owner_id:
+          type: "string"
+          format: "uuid"
+        description:
+          example: "Dedicated Guild to the Overwatch Game!"
+          type: "string"
+        created_at:
+          type: "string"
+          format: "date-time"
+        updated_at:
+          type: "string"
+          format: "date-time"
+    GuildList:
+      type: "array"
+      items:
+        type: "object"
+        $ref: "#/components/schemas/Guild"
+
+    GenericError:
+      type: object
+      properties:
+        error:
+          type: "string"
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  responses:
+    CantCreateInviteAlreadyExpired:
+      description: "Can't create invite that's already expired"
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/GenericError"
+          example:
+            error: "You can't create invite that's already expired!"
+    NotMemberOfGuild:
+      description: "You're not member of this guild"
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/GenericError"
+          example:
+            error: "You're not member of this guild."
+    InviteDoesntExists:
+      description: "Invite doesn't exists"
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/GenericError"
+          example:
+            error: "Invite doesn't exists."
+    GuildDoesNotExists:
+      description: "Guild doesn't exists"
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/GenericError"
+          example:
+            error: "Guild doesn't exists."
+    TokenMissingOrInvalid:
+      description: "Token is missing or invalid"
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/GenericError"
+          example:
+            error: "Token is missing or is invalid"
+paths:
+  /authenticate/register:
+    post:
+      summary: "Register user"
+      description: "Register user"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                username:
+                  type: string
+                  example: "test"
+                email:
+                  type: string
+                  example: "example@example.com"
+                password:
+                  type: string
+                  example: "example1234"
+      tags:
+        - Auth
+      responses:
+        "200":
+          description: "User registered"
+          content:
+            application/json:
+              schema:
+                type: "object"
+                properties:
+                  id:
+                    type: "string"
+                    format: "uuid"
+                  email:
+                    type: "string"
+                    format: "email"
+                  username:
+                    type: "string"
+                    example: "Leno"
+        "400":
+          description: "Email already exists"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GenericError"
+              example:
+                error: "Email is already in use"
+  /authenticate/login:
+    post:
+      summary: "Login user"
+      description: "Login user"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: "object"
+              properties:
+                email:
+                  type: string
+                  example: "example@example.com"
+                password:
+                  type: "string"
+                  example: "example1234"
+      responses:
+        "200":
+          description: "User logged"
+          content:
+            application/json:
+              schema:
+                type: "object"
+                properties:
+                  user:
+                    type: "object"
+                    properties:
+                      id:
+                        type: "string"
+                        format: "uuid"
+                      email:
+                        type: "string"
+                        format: "email"
+                  token:
+                    type: "string"
+                    format: "token"
+        "401":
+          description: "Email or password incorrect"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GenericError"
+              example:
+                error: "Email or password is incorrect"
+      tags:
+        - Auth
+  /guilds:
+    post:
+      summary: "Create a Guild"
+      description: "Create a Guild"
+      security:
+        - bearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: "object"
+              properties:
+                name:
+                  type: string
+                  example: "Overwatch Guild"
+                description:
+                  type: string
+                  example: "The official Overwatch Guild"
+      responses:
+        "201":
+          description: "Guild created"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Guild"
+        "401":
+          $ref: "#/components/responses/TokenMissingOrInvalid"
+      tags:
+        - Guilds
+  /guilds/{guild_id}/invites:
+    post:
+      summary: "Creates an invite"
+      description: "Creates an invite"
+      parameters:
+        - in: path
+          required: true
+          name: guild_id
+          description: "The Guild ID that you want to create an invite"
+          schema:
+            type: string
+      security:
+        - bearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: "object"
+              properties:
+                expires_in:
+                  type: "string"
+                  format: "date-time"
+      responses:
+        "201":
+          description: "Guild Invite created"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Guild"
+        "400":
+          $ref: "#/components/responses/CantCreateInviteAlreadyExpired"
+        "404":
+          $ref: "#/components/responses/GuildDoesNotExists"
+        "401":
+          $ref: "#/components/responses/TokenMissingOrInvalid"
+        "403":
+          $ref: "#/components/responses/NotMemberOfGuild"
+      tags:
+        - "Guilds"
+  /guilds/invites/accept:
+    post:
+      summary: "Accept guild invite"
+      description: "Accept guild invite"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: "object"
+              properties:
+                code:
+                  type: "string"
+      responses:
+        "200":
+          description: "Guild invite accepted"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Guild"
+        "401":
+          $ref: "#/components/responses/TokenMissingOrInvalid"
+        "404":
+          $ref: "#/components/responses/InviteDoesntExists"
+      security:
+        - bearerAuth: []
+      tags:
+        - Guilds
+  /users/guilds:
+    get:
+      summary: "Get user joined guilds"
+      description: "Get user joined guilds"
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: "User's joined guilds"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GuildList"
+        "401":
+          $ref: "#/components/responses/TokenMissingOrInvalid"
+      tags:
+        - Users

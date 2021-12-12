@@ -1,0 +1,25 @@
+version: "3.8"
+services:
+  discord-rest-clone-database:
+    image: postgres
+    container_name: discord-rest-clone-database
+    network_mode: host
+    environment: 
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=docker
+      - POSTGRES_DB=discord-rest-clone
+    volumes: 
+      - "discordDBData:/data/postgres"
+
+  discord-rest-clone:
+    build: .
+    container_name: discord-rest-clone
+    network_mode: host
+    volumes: 
+      - .:/app
+    depends_on: 
+      - discord-rest-clone-database
+    
+
+volumes: 
+  discordDBData:
