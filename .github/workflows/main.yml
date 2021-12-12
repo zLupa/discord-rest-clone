@@ -1,0 +1,33 @@
+name: CI
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-20.04
+
+    services:
+      postgres:
+        image: postgres
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: githubactions
+          POSTGRES_DB: discord-rest-clone-tests
+        ports:
+          - 5432:5432
+
+    steps:
+      - name: Setup NodeJS
+        uses: actions/checkout@v2
+        with:
+          node-version: 16
+      - name: Install dependencies
+        run: yarn
+
+      - name: Run tests
+        run: yarn test
+        env:
+          JWT_SECRET: githubactions_secret_jwt
+          DATABASE_URL: postgres://postgres:githubactions@localhost:5432/discord-rest-clone-tests
